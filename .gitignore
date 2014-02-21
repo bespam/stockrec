@@ -6,5 +6,6 @@
 ystockdownloader/*.csv
 */*/*.pyc
 */*/*.json
-data/*.*
+data/*.json
+data/*.csv
 ipython
