@@ -1,0 +1,10 @@
+*.pyc
+*.lnk
+*/*.pyc
+*/*.json
+*/*.pickle
+ystockdownloader/*.csv
+*/*/*.pyc
+*/*/*.json
+data/*.*
+ipython
