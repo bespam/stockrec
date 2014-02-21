@@ -25,7 +25,7 @@ def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
     corpora = []
     stocks_finite = []
     print("total stocks: "+ str(len(stocks)))
-    if corpus_reload == True or or os.path.isfile(module_dir + 'corpora.pickle') == False:
+    if corpus_reload == True or os.path.isfile(module_dir + 'corpora.pickle') == False:
         i = -1
         for tick in stocks:
             i = i + 1
