@@ -340,6 +340,7 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
      
             #Earnings before Interest, Tax, Depreciation, and Amortization
             ebitda = stock['ebitda']
+            ebitda = ebitda.replace(",","")
             if ebitda in ['N/A',"-","0"]: 
                 stock_new['ebitda_log'] = {"original":'N/A', "converted":np.nan}
             elif ebitda[-1] == 'T': 
@@ -698,4 +699,4 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
         raise
     
 if __name__ == '__main__':       
-    analyze(False, False,False)        
+    analyze(False, False, True)        
