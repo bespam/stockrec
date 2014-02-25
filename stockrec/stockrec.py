@@ -648,13 +648,17 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             
         def couchDBPush(stocks_data_norm,summary_tfidf):
             #updating stockrec
-            user = "akedulderideverthespecom"
-            password = "yHVHwdcwa7crwnRl0nLd2Fqf"
-            CouchDBAuth = couch.resource.CouchdbResource(filters=[BasicAuth(user, password)])
+            try:
+                from secrets import couch_user,couch_password
+            except:
+                couch_user = raw_input("Please enter CouchDB username:")
+                couch_password = raw_input("Please enter CouchDB password:")
+            CouchDBAuth = couch.resource.CouchdbResource(filters=[BasicAuth(couch_user, couch_password)])
             uri = "https://bespam.cloudant.com"
             CouchDBServer = couch.Server(uri, resource_instance=CouchDBAuth)
             database = "stockrec"
             db = CouchDBServer.get_db(database)
+            pdb.set_trace()
             title = "stocks"
             #saving stocks_data_norm
             if not db.doc_exist(title):
