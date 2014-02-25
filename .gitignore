@@ -4,6 +4,7 @@
 */*.json
 */*.pickle
 ystockdownloader/*.csv
+stockrec/secrets.py
 */*/*.pyc
 */*/*.json
 data/*.json
