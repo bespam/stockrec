@@ -1,10 +1,15 @@
-﻿from urllib import urlopen
+﻿# function which accepts the list of stock names,
+# downloads the profile page for each of the stock, 
+# and extracts stock parameters and company description
+
+
+from urllib import urlopen
 from bs4 import BeautifulSoup
 import sys
 import pdb
 import time
 
-
+# run every first Sunday of the each Month 
 def getProfiles(stocks):
     profiles ={}
     print("Downloading profiles, number of stocks: "+str(len(stocks)))
@@ -18,6 +23,7 @@ def getProfiles(stocks):
             #time.sleep(3)
     return profiles
 
+# run for each stock
 def getProfile(stock):
     #default values
     address = "N/A"

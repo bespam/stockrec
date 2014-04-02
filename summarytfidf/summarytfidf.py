@@ -1,3 +1,5 @@
+# TfIDf(LSA) and SVD analyses of downloaded stock summaries 
+
 import json
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -14,12 +16,20 @@ import pickle
 import os
 
 
+# Main procedure
 def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
+    #stocks - list of stock ticks
+    #corpus_reload - True/False - used if natural language parsing needs to be recalculated over again. Keep if text has not changed.
+    # n_features - Total number of primary components/features to retain in the SVD.
+    # min_df - When building the vocabulary/index ignore terms that have a term frequency strictly lower than min_df.
+    #stock_rec - any stock for unit test of a similarity    
+    
     #directory of the current module
     module_dir = os.path.dirname(__file__)
     if module_dir != "": module_dir = module_dir + "\\"
-    #initialize countVectorizer and tfidfTransformer
+    #initialize countVectorizer
     vectorizer = CountVectorizer(min_df = min_df)
+    #initialize tfidfTransformer
     transformer = TfidfTransformer(norm="l2")
     #list of all keywords
     corpora = []
@@ -32,20 +42,24 @@ def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
             print("\r"+ str(i)),
             #initialize Lemmatizer
             lmtzr = WordNetLemmatizer()
+            #load the summary (text)
             summary = profile[tick]["businessSummary"].encode("ascii","xmlcharrefreplace")
             if summary == "N/A":
                 continue
             else:
-                # sent tokenize
+                # extract sentences
                 sentences = sent_tokenize(summary)
                 words = []
+                # extract words
                 for sent in sentences:
                     words.extend(word_tokenize(sent))
                 #remove stopwords
                 words_nonstop = [w.lower() for w in words if w not in stopwords.words("english")]
                 #Lemmatize
                 words_lmtzr = [lmtzr.lemmatize(w) for w in words_nonstop]        
+                #part of speach tagging
                 pos = nltk.pos_tag(words_lmtzr)
+                #only keep nouns
                 keywords = [p[0] for p in pos if p[1] in ['NN','NNP','NNS']]
             
             corpora.append(" ".join(keywords))
@@ -62,11 +76,15 @@ def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
         stocks_finite = pickle.load(f)
     
     print("calculating tfidf")
+    #convert all terms into vectors (term: use frequency(TF))
     vectorizer.fit_transform(corpora)
     freq_term_matrix = vectorizer.transform(corpora)
+    #re-normalize to IDF
     transformer.fit(freq_term_matrix)
+    #calculate TFIDF matrix
     tfidf = transformer.transform(freq_term_matrix)
     
+    #SVD analysis to keep only n-primary components (to save space and computations time)
     print("performing SVD analysis to extract primary components")    
     u,s,v = svd(tfidf.todense().T)
     #cut v (number of features to retain)
@@ -93,6 +111,7 @@ def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
     f = open(file,"w") 
     json.dump(summary_tfidf,f)
     
+    #print the 10 most similar stocks to stock_rec
     if len(stock_rec) > 0:
         stock_index = stocks_finite.index(stock_rec)    
         stocks_finite = np.array(stocks_finite)
@@ -104,12 +123,6 @@ def analysis(stocks, corpus_reload, n_features, min_df,stock_rec):
         indx2 = cosine_similarities_2.argsort()[:-10:-1]
         print v_cut[stock_index]
         print stock_rec, stocks_finite[indx2],cosine_similarities_2[indx2]/cosine_similarities_2[indx2[0]]
-
-
-
-    #plt.plot(s)
-    #plt.show()
-    #pdb.set_trace()
         
 
 

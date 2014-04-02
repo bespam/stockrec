@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------------------------
+# Stock similarity recommender engine based on the stock statistical and profile data
+# -------------------------------------------------------------------------------------
+
 import os
 import re
 import pdb
@@ -17,6 +21,8 @@ import csv
 import shutil
 import pandas as pd
 
+
+#A daemon code to be run 24/7. Purpose: to run second level python scripts at a appropriate timing.  
 def run_daemon():
     #directory of the current module
     module_dir = os.path.dirname(__file__)
@@ -41,6 +47,7 @@ def run_daemon():
             stocks_profiles_file = dataDir + "stocks_profiles.json"
             summary_tfidf_file = dataDir + "summary_tfidf.json"
             # main recommender analysis
+            # the stock data are analysed on a daily basis right after US markets are closed.
             if day in [1,2,3,4,5]:
                 if hour >= 18: # 18 default
                     #check if stock_data_norm.json needs to be updated
@@ -51,6 +58,9 @@ def run_daemon():
                         print "Data was recalculated, sleeping one hour. ", "Time: ", time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(time.time()))          
                 else:
                     print "Waiting until 18:00 CDT for Stock Markets to close, sleeping one hour.", "Time: ", time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(time.time())),"\r",
+            # during the weekends, where other processes are finished, 
+            # check whether the list of US stocks needs to be updated.
+            # new list is pulled from the Yahoo lookup website every month.
             if day == 6 or day == 0:
                 #check if stocks.csv needs to be updated 
                 if os.path.isfile(stocks_info_file):
@@ -65,6 +75,9 @@ def run_daemon():
                     print "stocks_info.csv file was copied to "+stocks_info_file
                 else:
                     print "stocks_info.csv file exists, sleeping one hour. ", "Time: ", time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(time.time())),"\r",                    
+            # On Sun, where other processes are finished, 
+            # check whether the stock profiles needs to be updated
+            # profiles for each stock in the list are pulled from the Yahoo profiles website every month.
             if day == 0:
                 #downloading stock profiles if needed
                 if os.path.isfile(stocks_profiles_file):
@@ -85,6 +98,7 @@ def run_daemon():
                     print "Waiting, sleeping one hour.", "Time: ", time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(time.time())),"\r",
                 else:
                     print "Stocks_profiles.json file exists, sleeping one hour. ", "Time: ", time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(time.time())),"\r",
+                #once stock profiles are reloaded, profiles similarity should be recalculated
                 #check if summary_tfidf file exists or a old one
                 if os.path.isfile(summary_tfidf_file):
                     time_check = time.strftime("%Y-%m",time.localtime(os.path.getmtime(summary_tfidf_file))) != month_label

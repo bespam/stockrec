@@ -1,4 +1,6 @@
-#A modified version of https://github.com/Benny-/Yahoo-ticker-symbol-downloader
+#An improved version of https://github.com/Benny-/Yahoo-ticker-symbol-downloader
+# A python script which parses Yahoo Lookup website for any known US stocks and
+# saves them with some basic stock description [Ticker, Name, Exchange, categoryName, categoryNr]
 
 import sys
 import json
@@ -16,10 +18,12 @@ sys.setrecursionlimit(10000) # Do not remove this line. It contains magic.
 # --------------------------------------------NOTE: http://finance.yahoo.com/lookup/?s=-&m=US&t=s  can give all the stocks. (FIX later)
 
 
+# load downloader state to memory and continue download
 def loadDownloader():
     with open("downloader.json", "r") as file:
         return json.load(file);
 
+# save current downloader state to disk
 def saveDownloader(downloader):
     with open("downloader_new.json","w") as file:
         s = [downloader.symbols, downloader.nextq, downloader.items,downloader.totalItems]
@@ -27,7 +31,7 @@ def saveDownloader(downloader):
     shutil.copyfile("downloader_new.json","downloader.json")
     os.remove("downloader_new.json")
         
-
+# this function is started by stock_rec_run on the first weekend of the month
 def main():
     #directory of the current module
     module_dir = os.path.dirname(__file__)
@@ -57,26 +61,22 @@ def main():
                         " collected " + downloader.type + " data: " + str(downloader.getCollectedSymbolsSize())
                         +"           \r"),
                 symbols = downloader.fetchNextSymbols()
-                #print("Got " + str(len(symbols)) + " downloaded symbols")
                 if(len(symbols)>2):
-                    #print (str(symbols[0]))
-                    #print (str(symbols[1]))
-                    #print ("..ect")
-                    #print ("")
                     pass
                 if downloader.getQuery() != lastSaveQuery:
                     lastSaveQuery = downloader.getQuery()
                     #print ("Saving downloader to disk..."+"                                                                    \r"),
                     saveDownloader(downloader)
                 else:
-                    sleep(5) # We dont wish to overload the server.
+                    sleep(5) # We don't wish to overload the server.
                 gc.collect()
     except Exception as ex:
         raise
     except KeyboardInterrupt as ex:
         print("Suspending downloader to disk")
         raise
-
+    
+    # once downloader is finished, save all stocks to csv
     if downloader.isDone():
         print("Exporting "+downloader.type+" symbols")
         with open(module_dir + 'stocks_info.csv', 'w') as csvfile:
@@ -89,5 +89,7 @@ def main():
                     except:
                         pass  
         os.remove("downloader.json")
+
+        
 if __name__ == "__main__":
     main()

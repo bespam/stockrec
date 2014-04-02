@@ -1,3 +1,9 @@
+# central stock_rec analysis routine. 
+# stock data is being downloaded using Yahoo Finance API
+# features are selected and renormalized and
+# saved into the json data file, which then pushed to CouchDB
+# similarity analysis is being performed in the front-end JavaScript module.   
+
 import os
 import pandas as pd
 import numpy as np
@@ -21,7 +27,8 @@ import sys
 import shutil
 import pickle
 
-
+# analysis is being done serially.
+# this code has been prototyped in iPhyton and converted to regular python script 
 def analyze(ystockquote_run, stockconvert_run, couchDB_push):
     #directory of the current module
     module_dir = os.path.dirname(__file__)
@@ -110,11 +117,12 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
         summary_tfidf = json.load(f)
         
         time_stamp = ""
-        #loop through all available stocks
+        # Load stock statistical parameters.
+        # loop through all available stocks
         def getAllInfo():
             info = {}
             print("total stocks: "+ str(len(stocksAll.index.values)))
-            #split in groups of 200
+            #split in groups of 200 (max number of stocks are allowed to be downloaded simultaneously)
             n = 200
             symbol_groups = [ stocksAll.index.values[i:i+n] for i in range(0, len(stocksAll.index.values), n) ]
             i = 0
@@ -146,7 +154,8 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             f = open(module_dir + "ystockquote\\stocks_quotes.json","w")
             json.dump(info,f)
             #time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d')
-            
+        
+        #either load saved data or reload it from Yahoo Finance        
         def loadAllInfo():
             file = module_dir + "ystockquote\\stocks_quotes.json"
             f = open(file,"r") 
@@ -170,7 +179,7 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
         stocksInfo,time_stamp = loadAllInfo()
         print("stock stats were loaded from stocksInfo.json")
 
-        #get info and normalize
+        #get statistical info and extract selected parameters
         def stockConvert(tick):
             stock = copy.deepcopy(stocksInfo[tick])
             stock_new = OrderedDict()
@@ -381,7 +390,8 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             df_orig = pd.DataFrame([x["original"] for x in stock_new.values()],index = stock_new.keys(),columns = [tick]) 
             return (df_orig,df_conv)
         
-        #loop through all available stocks
+        
+        #loop through all available stocks and extract selected parameters
         print("stock stats are being remapped to log formats")
         def convertAll():
             i = 0
@@ -401,6 +411,7 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
                         df_conv = pd.DataFrame(conv)                            
             return (df_orig, df_conv)
         
+        
         def loadData():
             file = module_dir + "stocks_data.pickle"
             f = open(file,"rb") 
@@ -410,6 +421,8 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             data_orig = pickle.load(f)      
             return (data,data_orig) 
         
+        # if stockconvert_run flag is True or pickle file does not exist rerun,
+        # else reload form *.pickle file
         if stockconvert_run == True or os.path.isfile(module_dir + 'stocks_data.pickle') == False:
             stocksDataOrig, stocksData = convertAll()
             print("stocksDat and stocksDataOrig were recalculated")
@@ -426,19 +439,20 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
         print("\r");
         print("some stock stats were remapped to log formats")
         
-        #remove stocksData columns which have less than 5 non-zero values
+        #remove stocksData columns which have less than n non-zero values
         stat = (stocksData.count(axis=0) > -1)# was 16, changed to -1 to include all of the stocks
         selStocks = stat[stat == True].index#]
         stocksDataSelected = stocksData[selStocks]
         print("select all stocks, even with all NANs")
         
-        #remove stocksDataOrig columns where StocsData columns have less than 5 not zero values
+        #remove stocksDataOrig columns where StocsData columns have less than n not zero values
         stat = (stocksData.count(axis=0) > -1) # was 16, changed to -1 to include all of the stocks
         selStocks = stat[stat == True].index#]
         stocksDataOrigSelected = stocksDataOrig[selStocks]
         print("select all stocks, even with all NANs")
      
-        #data normalization
+        # data normalization, discretization and binning (for feature unification and noise reduction)
+        # 
         n_baskets = 30
         stocksDataT = copy.deepcopy(stocksDataSelected.T)
 
@@ -645,10 +659,12 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
         class Book(couch.Document):
             title = ""
             data = {}
-            
+        
+        #puch to CouchDB.     
         def couchDBPush(stocks_data_norm,summary_tfidf):
             #updating stockrec
             try:
+                #read credentials from secrets file
                 from secrets import couch_user,couch_password
             except:
                 couch_user = raw_input("Please enter CouchDB username:")
@@ -658,7 +674,6 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             CouchDBServer = couch.Server(uri, resource_instance=CouchDBAuth)
             database = "stockrec"
             db = CouchDBServer.get_db(database)
-            pdb.set_trace()
             title = "stocks"
             #saving stocks_data_norm
             if not db.doc_exist(title):
@@ -672,6 +687,7 @@ def analyze(ystockquote_run, stockconvert_run, couchDB_push):
             db.save_doc(doc)         
             
             #updating stockrec_userdata
+            #updating default settings for parameter weights
             database = "stockrec_userdata"
             db = CouchDBServer.get_db(database)
             new_parameters = stocks_data_norm['parameters']
